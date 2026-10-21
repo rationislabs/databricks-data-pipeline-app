@@ -11,6 +11,10 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      # only reach the app through gradio, which caps them; `uv lock --upgrade` moves them when it allows
+      - dependency-name: safehttpx
+      - dependency-name: tomlkit
     groups:
       python:
         patterns: ["*"]
