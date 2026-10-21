@@ -169,7 +169,7 @@ requests==2.34.2
     #   databricks-sql-connector
 rich==15.0.0
     # via typer
-safehttpx==0.1.7
+safehttpx==0.2.0
     # via gradio
 semantic-version==2.10.0
     # via gradio
@@ -183,7 +183,7 @@ starlette==1.9.0
     #   gradio
 thrift==0.25.0
     # via databricks-sql-connector
-tomlkit==0.14.0
+tomlkit==0.15.2
     # via gradio
 tqdm==4.70.1
     # via huggingface-hub
