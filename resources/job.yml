@@ -1,0 +1,9 @@
+resources:
+  jobs:
+    refresh:
+      name: energy-refresh
+      max_concurrent_runs: 1
+      tasks:
+        - task_key: pipeline
+          pipeline_task:
+            pipeline_id: ${resources.pipelines.energy.id}

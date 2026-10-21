@@ -1,0 +1,19 @@
+# One Asset Bundle for everything on Databricks: `databricks bundle deploy`.
+bundle:
+  name: energy-lakehouse
+
+include:
+  - resources/*.yml
+
+variables:
+  catalog:
+    description: Unity Catalog catalog that holds the bronze, silver and gold schemas
+    default: workspace
+  warehouse_id:
+    description: The SQL warehouse (Free Edition has exactly one)
+    lookup:
+      warehouse: Serverless Starter Warehouse
+
+targets:
+  prod:
+    default: true

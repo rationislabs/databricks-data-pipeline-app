@@ -1,0 +1,46 @@
+[project]
+name = "databricks-data-pipeline-app"
+version = "0.1.0"
+description = "European electricity on Databricks: Lakeflow pipeline, AI/BI dashboard and a Gradio app"
+requires-python = ">=3.11,<3.13"  # 3.11: the Databricks Apps runtime
+dependencies = [
+  "httpx>=0.28,<1",
+  "databricks-sdk>=0.149,<1",
+]
+
+[tool.uv]
+package = false
+default-groups = ["dev", "spark", "app"]
+# gradio caps pillow <13, but 12.x has critical CVEs and the app never decodes images.
+override-dependencies = ["pillow>=13"]
+
+[dependency-groups]
+dev = [
+  "pytest>=9.1",
+  "respx>=0.23",
+  "ruff>=0.12",
+  "invoke>=2.2",
+  "pyyaml>=6.0,<7",
+]
+spark = [
+  "pyspark==4.2.0",  # local tests only (Java 17 or newer); Databricks runs its own Spark
+]
+app = [
+  "gradio>=6.29,<7",
+  "plotly>=7.1,<8",
+  "pandas>=2.2,<4",
+  "databricks-sql-connector>=4.6,<5",
+]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "--import-mode=importlib -ra"
+pythonpath = [".", "pipeline", "app"]  # pipeline/ and app/ modules import each other top-level
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+ignore = ["E501"]  # ruff format owns line length; long string literals are allowed

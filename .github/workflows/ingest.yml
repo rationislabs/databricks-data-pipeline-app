@@ -1,0 +1,38 @@
+name: Ingest
+on:
+  schedule:
+    - cron: "23 */6 * * *"
+  workflow_dispatch:
+    inputs:
+      since:
+        description: Re-fetch from this day (YYYY-MM-DD); empty continues from the cursor
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ingest
+  cancel-in-progress: false
+
+jobs:
+  ingest:
+    # Skipped until the repository variable DATABRICKS_HOST is set (README: one-time steps).
+    if: vars.DATABRICKS_HOST != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 355
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884 # v10.3.0
+        with:
+          enable-cache: true
+      - run: uv sync --frozen --no-default-groups
+      - run: uv run --no-sync python -m ingest ${SINCE:+--since "$SINCE"}
+        env:
+          SINCE: ${{ inputs.since }}
+          ENERGY_CATALOG: ${{ vars.ENERGY_CATALOG }}
+          DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}

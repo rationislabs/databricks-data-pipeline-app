@@ -1,0 +1,21 @@
+resources:
+  schemas:
+    bronze:
+      catalog_name: ${var.catalog}
+      name: bronze
+      comment: Raw Energy-Charts files, as fetched
+    silver:
+      catalog_name: ${var.catalog}
+      name: silver
+      comment: Typed, deduplicated, quality-checked rows
+    gold:
+      catalog_name: ${var.catalog}
+      name: gold
+      comment: Tables for the dashboard and the app
+  volumes:
+    landing:
+      catalog_name: ${var.catalog}
+      schema_name: ${resources.schemas.bronze.name}
+      name: landing
+      volume_type: MANAGED
+      comment: GitHub Actions drops Energy-Charts files here; Auto Loader picks them up

@@ -1,0 +1,12 @@
+resources:
+  apps:
+    explorer:
+      name: energy-explorer
+      description: Greenest and cheapest hours of a day, and the pipeline's health
+      source_code_path: ../app
+      resources:
+        - name: sql-warehouse
+          description: Reads the gold tables
+          sql_warehouse:
+            id: ${var.warehouse_id}
+            permission: CAN_USE

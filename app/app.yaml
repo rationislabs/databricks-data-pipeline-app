@@ -1,0 +1,6 @@
+command: ["python", "main.py"]
+env:
+  - name: DATABRICKS_WAREHOUSE_ID
+    valueFrom: sql-warehouse
+  - name: ENERGY_CATALOG
+    value: workspace  # keep equal to the bundle variable `catalog`

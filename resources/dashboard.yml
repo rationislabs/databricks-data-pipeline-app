@@ -1,0 +1,8 @@
+resources:
+  dashboards:
+    energy_dashboard:
+      display_name: European electricity
+      file_path: ../dashboards/energy.lvdash.json
+      warehouse_id: ${var.warehouse_id}
+      dataset_catalog: ${var.catalog}  # the queries name gold tables without a catalog
+      dataset_schema: gold

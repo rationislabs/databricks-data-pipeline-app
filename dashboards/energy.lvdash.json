@@ -1,0 +1,494 @@
+{
+  "datasets": [
+    {
+      "name": "ds_mix",
+      "displayName": "Daily generation mix",
+      "queryLines": [
+        "SELECT country, local_date, series, mwh\n",
+        "FROM mix_daily"
+      ]
+    },
+    {
+      "name": "ds_share_month",
+      "displayName": "Monthly renewable share",
+      "queryLines": [
+        "SELECT country, date_trunc('MONTH', local_date) AS month, avg(renewable_share) AS renewable_share\n",
+        "FROM price_vs_renewables\n",
+        "GROUP BY ALL"
+      ]
+    },
+    {
+      "name": "ds_price_daily",
+      "displayName": "Daily price per zone",
+      "queryLines": [
+        "SELECT zone, local_date, avg(eur_mwh) AS eur_mwh\n",
+        "FROM price_vs_renewables\n",
+        "WHERE eur_mwh IS NOT NULL\n",
+        "GROUP BY ALL"
+      ]
+    },
+    {
+      "name": "ds_scatter",
+      "displayName": "Hourly price vs renewable share, last 90 days",
+      "queryLines": [
+        "SELECT country, renewable_share, eur_mwh\n",
+        "FROM price_vs_renewables\n",
+        "WHERE eur_mwh IS NOT NULL AND local_date >= date_sub(current_date(), 90)"
+      ]
+    },
+    {
+      "name": "ds_compare",
+      "displayName": "Yearly renewable share",
+      "queryLines": [
+        "SELECT country, year(local_date) AS year, avg(renewable_share) AS renewable_share\n",
+        "FROM price_vs_renewables\n",
+        "GROUP BY ALL"
+      ]
+    }
+  ],
+  "pages": [
+    {
+      "name": "mix",
+      "displayName": "Mix",
+      "layout": [
+        {
+          "widget": {
+            "name": "f_mix",
+            "queries": [
+              {
+                "name": "f_mix_ds_mix",
+                "query": {
+                  "datasetName": "ds_mix",
+                  "fields": [
+                    {
+                      "name": "country",
+                      "expression": "`country`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              },
+              {
+                "name": "f_mix_ds_share_month",
+                "query": {
+                  "datasetName": "ds_share_month",
+                  "fields": [
+                    {
+                      "name": "country",
+                      "expression": "`country`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 2,
+              "widgetType": "filter-multi-select",
+              "encodings": {
+                "fields": [
+                  {
+                    "fieldName": "country",
+                    "displayName": "Country",
+                    "queryName": "f_mix_ds_mix"
+                  },
+                  {
+                    "fieldName": "country",
+                    "displayName": "Country",
+                    "queryName": "f_mix_ds_share_month"
+                  }
+                ]
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Country"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 2,
+            "height": 1
+          }
+        },
+        {
+          "widget": {
+            "name": "w_mix",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_mix",
+                  "fields": [
+                    {
+                      "name": "local_date",
+                      "expression": "`local_date`"
+                    },
+                    {
+                      "name": "sum(mwh)",
+                      "expression": "SUM(`mwh`)"
+                    },
+                    {
+                      "name": "series",
+                      "expression": "`series`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "area",
+              "encodings": {
+                "x": {
+                  "fieldName": "local_date",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": "Day"
+                },
+                "y": {
+                  "fieldName": "sum(mwh)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "MWh"
+                },
+                "color": {
+                  "fieldName": "series",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Source"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Generation by source"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 1,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "w_share",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_share_month",
+                  "fields": [
+                    {
+                      "name": "month",
+                      "expression": "`month`"
+                    },
+                    {
+                      "name": "avg(renewable_share)",
+                      "expression": "AVG(`renewable_share`)"
+                    },
+                    {
+                      "name": "country",
+                      "expression": "`country`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "month",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": "Month"
+                },
+                "y": {
+                  "fieldName": "avg(renewable_share)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Renewable share of load (%)"
+                },
+                "color": {
+                  "fieldName": "country",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Country"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Renewable share by month"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 7,
+            "width": 6,
+            "height": 5
+          }
+        },
+        {
+          "widget": {
+            "name": "t_mix",
+            "textbox_spec": "Data: Energy-Charts (Fraunhofer ISE), CC BY 4.0; prices: Bundesnetzagentur | SMARD.de, CC BY 4.0. Italy's price is the IT-North zone."
+          },
+          "position": {
+            "x": 0,
+            "y": 12,
+            "width": 6,
+            "height": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "prices",
+      "displayName": "Prices",
+      "layout": [
+        {
+          "widget": {
+            "name": "w_price",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_price_daily",
+                  "fields": [
+                    {
+                      "name": "local_date",
+                      "expression": "`local_date`"
+                    },
+                    {
+                      "name": "avg(eur_mwh)",
+                      "expression": "AVG(`eur_mwh`)"
+                    },
+                    {
+                      "name": "zone",
+                      "expression": "`zone`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "line",
+              "encodings": {
+                "x": {
+                  "fieldName": "local_date",
+                  "scale": {
+                    "type": "temporal"
+                  },
+                  "displayName": "Day"
+                },
+                "y": {
+                  "fieldName": "avg(eur_mwh)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "€/MWh"
+                },
+                "color": {
+                  "fieldName": "zone",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Price zone"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Daily day-ahead price"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "w_scatter",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_scatter",
+                  "fields": [
+                    {
+                      "name": "renewable_share",
+                      "expression": "`renewable_share`"
+                    },
+                    {
+                      "name": "eur_mwh",
+                      "expression": "`eur_mwh`"
+                    },
+                    {
+                      "name": "country",
+                      "expression": "`country`"
+                    }
+                  ],
+                  "disaggregated": true
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "scatter",
+              "encodings": {
+                "x": {
+                  "fieldName": "renewable_share",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Renewable share of load (%)"
+                },
+                "y": {
+                  "fieldName": "eur_mwh",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "€/MWh"
+                },
+                "color": {
+                  "fieldName": "country",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Country"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Price vs renewable share (hourly, last 90 days)"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 6,
+            "width": 6,
+            "height": 6
+          }
+        },
+        {
+          "widget": {
+            "name": "t_prices",
+            "textbox_spec": "Data: Energy-Charts (Fraunhofer ISE), CC BY 4.0; prices: Bundesnetzagentur | SMARD.de, CC BY 4.0. Italy's price is the IT-North zone."
+          },
+          "position": {
+            "x": 0,
+            "y": 12,
+            "width": 6,
+            "height": 1
+          }
+        }
+      ]
+    },
+    {
+      "name": "compare",
+      "displayName": "Compare",
+      "layout": [
+        {
+          "widget": {
+            "name": "w_compare",
+            "queries": [
+              {
+                "name": "main_query",
+                "query": {
+                  "datasetName": "ds_compare",
+                  "fields": [
+                    {
+                      "name": "year",
+                      "expression": "`year`"
+                    },
+                    {
+                      "name": "avg(renewable_share)",
+                      "expression": "AVG(`renewable_share`)"
+                    },
+                    {
+                      "name": "country",
+                      "expression": "`country`"
+                    }
+                  ],
+                  "disaggregated": false
+                }
+              }
+            ],
+            "spec": {
+              "version": 3,
+              "widgetType": "bar",
+              "encodings": {
+                "x": {
+                  "fieldName": "country",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Country"
+                },
+                "y": {
+                  "fieldName": "avg(renewable_share)",
+                  "scale": {
+                    "type": "quantitative"
+                  },
+                  "displayName": "Renewable share of load (%)"
+                },
+                "color": {
+                  "fieldName": "year",
+                  "scale": {
+                    "type": "categorical"
+                  },
+                  "displayName": "Year"
+                }
+              },
+              "frame": {
+                "showTitle": true,
+                "title": "Renewable share by country and year"
+              },
+              "mark": {
+                "layout": "group"
+              }
+            }
+          },
+          "position": {
+            "x": 0,
+            "y": 0,
+            "width": 6,
+            "height": 7
+          }
+        },
+        {
+          "widget": {
+            "name": "t_compare",
+            "textbox_spec": "Data: Energy-Charts (Fraunhofer ISE), CC BY 4.0; prices: Bundesnetzagentur | SMARD.de, CC BY 4.0. Italy's price is the IT-North zone."
+          },
+          "position": {
+            "x": 0,
+            "y": 7,
+            "width": 6,
+            "height": 1
+          }
+        }
+      ]
+    }
+  ]
+}

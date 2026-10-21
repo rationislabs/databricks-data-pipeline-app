@@ -1,0 +1,40 @@
+name: Deploy
+on:
+  workflow_run:
+    workflows: [CI]
+    types: [completed]
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: deploy
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    # workflow_run: only a successful CI run for a push to this repo's main, never fork code.
+    if: >-
+      vars.DATABRICKS_HOST != '' && (github.event_name == 'workflow_dispatch' ||
+      (github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_repository.full_name == github.repository))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
+      - uses: databricks/setup-cli@2bf4520fd10723ed5a22eca62a8c8a63714a7ba9 # v1.21.0
+      - run: |
+          for v in DATABRICKS_TOKEN DATABRICKS_CLIENT_ID DATABRICKS_CLIENT_SECRET; do
+            [ -n "${!v}" ] || unset "$v"   # unset secrets arrive as empty strings
+          done
+          databricks bundle deploy --var="catalog=${ENERGY_CATALOG:-workspace}"
+        env:
+          ENERGY_CATALOG: ${{ vars.ENERGY_CATALOG }}
+          DATABRICKS_HOST: ${{ vars.DATABRICKS_HOST }}
+          DATABRICKS_CLIENT_ID: ${{ secrets.DATABRICKS_CLIENT_ID }}
+          DATABRICKS_CLIENT_SECRET: ${{ secrets.DATABRICKS_CLIENT_SECRET }}
+          DATABRICKS_TOKEN: ${{ secrets.DATABRICKS_TOKEN }}

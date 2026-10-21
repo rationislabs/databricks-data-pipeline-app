@@ -1,0 +1,19 @@
+resources:
+  pipelines:
+    energy:
+      name: energy
+      catalog: ${var.catalog}
+      schema: ${resources.schemas.silver.name}
+      serverless: true
+      continuous: false
+      root_path: ../pipeline
+      libraries:
+        - file:
+            path: ../pipeline/definitions.py
+      configuration:
+        energy.catalog: ${var.catalog}
+        energy.landing: /Volumes/${var.catalog}/bronze/landing
+      event_log:
+        catalog: ${var.catalog}
+        schema: ${resources.schemas.gold.name}
+        name: pipeline_events
