@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import sys
 from datetime import date, datetime, timedelta
 from pathlib import Path
@@ -26,7 +27,12 @@ def clean_env(env=os.environ) -> None:
         del env[k]
 
 
-def refresh(w, job_name: str = "energy-refresh", timeout=timedelta(hours=2)) -> None:
+REFRESH_TIMEOUT = timedelta(hours=2)
+# Fetching, then the refresh wait: together under ingest.yml's 355-minute job limit.
+DEFAULT_BUDGET_MINUTES = 180  # one fetch can still take ~37 min past the check
+
+
+def refresh(w, job_name: str = "energy-refresh", timeout=REFRESH_TIMEOUT) -> None:
     jobs = list(w.jobs.list(name=job_name))
     if not jobs:
         raise RuntimeError(f"job {job_name!r} not found: deploy the bundle first")
@@ -36,10 +42,20 @@ def refresh(w, job_name: str = "energy-refresh", timeout=timedelta(hours=2)) -> 
         raise RuntimeError(f"{job_name} ended {state}")
 
 
+def catalog() -> str:
+    """ENERGY_CATALOG, or `workspace`; it becomes part of a volume path, so only an identifier."""
+    name = os.environ.get("ENERGY_CATALOG") or "workspace"
+    if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", name):
+        raise SystemExit(
+            f"ENERGY_CATALOG must be letters, digits and _ (not starting with a digit), not {name!r}"
+        )
+    return name
+
+
 def main(argv: list[str] | None = None) -> int:
     p = argparse.ArgumentParser(prog="python -m ingest")
     p.add_argument("--since", type=date.fromisoformat, help="re-fetch from this day")
-    p.add_argument("--budget-minutes", type=float, default=330)
+    p.add_argument("--budget-minutes", type=float, default=DEFAULT_BUDGET_MINUTES)
     p.add_argument("--local", type=Path, help="write to this folder instead of the volume")
     p.add_argument("--no-refresh", action="store_true")
     args = p.parse_args(argv)
@@ -51,8 +67,7 @@ def main(argv: list[str] | None = None) -> int:
         from databricks.sdk import WorkspaceClient
 
         w = WorkspaceClient()
-        catalog = os.environ.get("ENERGY_CATALOG") or "workspace"
-        store = volume.Volume(w.files, f"/Volumes/{catalog}/bronze/landing")
+        store = volume.Volume(w.files, f"/Volumes/{catalog()}/bronze/landing")
         do_refresh = None if args.no_refresh else (lambda: refresh(w))
 
     with energy_charts.client() as http:

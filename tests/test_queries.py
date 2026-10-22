@@ -48,7 +48,7 @@ def test_day_query_params_and_frame(clock):
     df = q.day("at", date(2026, 10, 7))
     assert list(df.columns) == ["local_hour", "renewable_share"] and len(df) == 2
     sql, params = conn.executed[0]
-    assert "cat.gold.green_hours" in sql and params == {"country": "at", "day": "2026-10-07"}
+    assert "`cat`.gold.green_hours" in sql and params == {"country": "at", "day": "2026-10-07"}
 
 
 def test_results_cached_for_ten_minutes(clock):
@@ -76,7 +76,7 @@ def test_health_queries_use_gold(clock, name):
     conn = FakeConn()
     getattr(queries.Queries(conn, clock=clock, catalog="cat"), name)()
     sql, _ = conn.executed[0]
-    assert "cat.gold." in sql
+    assert "`cat`.gold." in sql
 
 
 def test_setup_errors_are_marked_and_logged(clock, caplog):
@@ -106,3 +106,35 @@ def test_missing_credentials_are_setup_not_a_slow_warehouse(clock, error):
     with pytest.raises(queries.Unavailable) as e:
         queries.Queries(connect, clock=clock).freshness()
     assert e.value.setup is True
+
+
+def test_the_catalog_is_validated_and_quoted(clock):
+    conn = FakeConn()
+    q = queries.Queries(conn, clock=clock, catalog="energy_eu")
+    q.day("AT", date(2026, 10, 7))
+    sql, _ = conn.executed[0]
+    assert "`energy_eu`.gold." in sql
+    for bad in ("a-b", "a.b", "x`; drop", ""):
+        with pytest.raises(ValueError):
+            queries.Queries(conn, clock=clock, catalog=bad)
+
+
+def test_the_cache_is_bounded_and_keeps_what_is_used(clock):
+    from datetime import timedelta
+
+    conn = FakeConn()
+    q = queries.Queries(conn, clock=clock, catalog="cat")
+    first = date(2020, 1, 1)
+    q.day("AT", first)
+    for i in range(1, queries.MAX_CACHE + 50):
+        q.day("AT", first + timedelta(days=i))
+        q.day("AT", first)  # used again and again: stays
+    assert len(q._cache) == queries.MAX_CACHE
+    opened = conn.opened
+    q.day("AT", first)
+    assert conn.opened == opened
+
+
+def test_a_catalog_starting_with_a_digit_is_refused(clock):
+    with pytest.raises(ValueError):
+        queries.Queries(FakeConn(), clock=clock, catalog="2024")

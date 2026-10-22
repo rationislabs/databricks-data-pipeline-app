@@ -1,4 +1,5 @@
 from datetime import date, timedelta
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -143,3 +144,57 @@ def test_main_local_mode(tmp_path, monkeypatch, capsys):
     assert cli.main(["--local", str(tmp_path)]) == 0
     assert (tmp_path / "power/at/2023-01-01_2023-01-03.json").exists()
     assert "14 files" in capsys.readouterr().out
+
+
+def test_the_volume_catalog_is_validated(monkeypatch):
+    monkeypatch.setenv("ENERGY_CATALOG", "energy_eu")
+    assert cli.catalog() == "energy_eu"
+    monkeypatch.delenv("ENERGY_CATALOG")
+    assert cli.catalog() == "workspace"
+    monkeypatch.setenv("ENERGY_CATALOG", "../x")
+    with pytest.raises(SystemExit):
+        cli.catalog()
+
+
+def test_a_store_error_costs_one_file_not_the_run(tmp_path):
+    from databricks.sdk.errors import DatabricksError
+
+    class Flaky(volume.LocalDir):
+        def put(self, rel, body):
+            if rel.startswith("price/AT/"):
+                raise DatabricksError("volume hiccup")
+            super().put(rel, body)
+
+    store = Flaky(tmp_path)
+    caught_up(store)
+    s = run.run(store, FakeApi(), today=TODAY, budget_s=3600)
+    assert s.files == 13 and any("volume hiccup" in e for e in s.errors)
+    assert not (tmp_path / "price/AT").exists()
+    assert (tmp_path / "price/IT-North/2026-10-07_2026-10-08.json").exists()  # later files land
+
+
+def test_the_default_budget_leaves_room_for_the_refresh_wait():
+    import yaml
+
+    wf = yaml.safe_load((Path(__file__).parent.parent / ".github/workflows/ingest.yml").read_text())
+    job_minutes = wf["jobs"]["ingest"]["timeout-minutes"]
+    assert cli.DEFAULT_BUDGET_MINUTES + cli.REFRESH_TIMEOUT.total_seconds() / 60 < job_minutes
+
+
+def test_a_store_error_on_the_cursor_write_does_not_stop_the_run(tmp_path):
+    from databricks.sdk.errors import DatabricksError
+
+    class Flaky(volume.LocalDir):
+        fails = 0  # armed after the setup below has written its cursor
+
+        def put(self, rel, body):
+            if rel == run.STATE and Flaky.fails:
+                Flaky.fails -= 1
+                raise DatabricksError("volume hiccup")
+            super().put(rel, body)
+
+    store = Flaky(tmp_path)
+    caught_up(store)
+    Flaky.fails = 1
+    s = run.run(store, FakeApi(), today=TODAY, budget_s=3600)
+    assert s.files == 14 and any("volume hiccup" in e for e in s.errors)

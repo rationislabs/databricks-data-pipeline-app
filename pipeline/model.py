@@ -44,3 +44,11 @@ KIND = {
 }
 RENEWABLE_SHARE = "renewable_share_of_load"  # the one definition used everywhere
 PRICE_SERIES = "day_ahead_price"
+
+
+def catalog_name(name: str) -> str:
+    """The catalog the pipeline writes to. Every table name is built from it, so only
+    letters, digits and _, not starting with a digit (the rule ingest and the app apply)."""
+    if not (name.isascii() and name.replace("_", "a").isalnum() and not name[:1].isdigit()):
+        raise ValueError(f"energy.catalog must be an identifier, not {name!r}")
+    return name

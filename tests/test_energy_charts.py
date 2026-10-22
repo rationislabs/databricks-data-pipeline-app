@@ -114,3 +114,22 @@ def test_unusable_answers_raise(api, response):
     mock.get(POWER).mock(return_value=response)
     with pytest.raises(ec.FetchError):
         charts.fetch("power", "at", D1, D2)
+
+
+@pytest.mark.parametrize(
+    "header, wait", [("3600", 300.0), ("nan", 60.0), ("inf", 60.0), ("-5", 1.0), ("0.5", 1.0)]
+)
+def test_retry_after_is_finite_and_capped(header, wait):
+    from ingest.energy_charts import retry_after
+
+    assert retry_after(httpx.Response(429, headers={"retry-after": header})) == wait
+
+
+def test_retry_after_as_an_http_date():
+    from datetime import UTC, datetime, timedelta
+    from email.utils import format_datetime
+
+    from ingest.energy_charts import retry_after
+
+    when = format_datetime(datetime.now(UTC) + timedelta(seconds=30), usegmt=True)
+    assert 25 <= retry_after(httpx.Response(429, headers={"retry-after": when})) <= 31

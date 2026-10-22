@@ -9,6 +9,8 @@ from collections.abc import Callable
 from dataclasses import dataclass, field
 from datetime import date
 
+from databricks.sdk.errors import DatabricksError
+
 from pipeline.model import COUNTRIES, ZONE_OF
 
 from . import cursor as cur
@@ -57,10 +59,18 @@ def run(
             summary.errors.append(str(e))
             failed.add((endpoint, area))
             continue
-        store.put(path(endpoint, area, start, end), body)
+        try:
+            store.put(path(endpoint, area, start, end), body)
+        except DatabricksError as e:  # a volume hiccup costs this file, not the files after it
+            summary.errors.append(f"{endpoint} {area} {start}..{end}: store: {e}")
+            failed.add((endpoint, area))
+            continue
         cur.advance(cursor, f"{endpoint}/{area}", start, end, today)
-        store.put(STATE, cur.dump(cursor))
         summary.files += 1
+        try:
+            store.put(STATE, cur.dump(cursor))
+        except DatabricksError as e:  # the next cursor write catches up; carry on
+            summary.errors.append(f"cursor: store: {e}")
     if refresh is not None and summary.files:
         refresh()
     return summary

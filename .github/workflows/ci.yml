@@ -11,6 +11,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
           distribution: temurin
@@ -23,14 +25,20 @@ jobs:
       - run: uv run pytest
       - run: |
           uv export --frozen --no-emit-project -o "$RUNNER_TEMP/requirements.txt"
-          uvx pip-audit --disable-pip -r "$RUNNER_TEMP/requirements.txt"
+          uvx pip-audit==2.10.1 --disable-pip -r "$RUNNER_TEMP/requirements.txt"
 
   validate:
     # The bundle check needs a workspace: skipped until DATABRICKS_HOST is set.
-    if: vars.DATABRICKS_HOST != ''
+    # main only, from the prod environment: the same secrets deploy uses, never on a branch.
+    if: vars.DATABRICKS_HOST != '' && github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
+    environment:
+      name: prod
+      deployment: false # reads prod's secrets; deploys nothing
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
       - uses: databricks/setup-cli@2bf4520fd10723ed5a22eca62a8c8a63714a7ba9 # v1.21.0
       - run: |
           for v in DATABRICKS_TOKEN DATABRICKS_CLIENT_ID DATABRICKS_CLIENT_SECRET; do

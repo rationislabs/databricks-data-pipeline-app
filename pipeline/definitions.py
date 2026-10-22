@@ -9,11 +9,12 @@ if "__file__" in globals():  # the bundle's root_path normally covers this
     sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import dlt  # noqa: E402
+import model  # noqa: E402
 import rules  # noqa: E402
 import transforms  # noqa: E402
 from pyspark.sql import functions as F  # noqa: E402
 
-CATALOG = spark.conf.get("energy.catalog")  # noqa: F821 — provided by the pipeline runtime
+CATALOG = model.catalog_name(spark.conf.get("energy.catalog"))  # noqa: F821 — pipeline runtime
 LANDING = spark.conf.get("energy.landing")  # noqa: F821
 
 
@@ -30,7 +31,7 @@ def _landing(sub: str):
 
 
 def _read(table: str):
-    return spark.read.table(f"{CATALOG}.{table}")  # noqa: F821
+    return spark.read.table(f"`{CATALOG}`.{table}")  # noqa: F821 — quoted: an identifier
 
 
 @dlt.table(

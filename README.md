@@ -91,11 +91,14 @@ and reads it from the environment: `DATABRICKS_HOST` plus `DATABRICKS_TOKEN` (or
 1. Create a Databricks Free Edition account for Rationis Labs.
 2. Create a service principal with an OAuth secret (Settings → Identity and access), or a
    personal access token if Free Edition does not offer service principals.
-3. In the GitHub repo: variable `DATABRICKS_HOST` (the workspace URL); secrets
-   `DATABRICKS_CLIENT_ID` and `DATABRICKS_CLIENT_SECRET`, or `DATABRICKS_TOKEN`. Optional
-   variable `ENERGY_CATALOG` if the workspace catalog is not called `workspace`
-   (then also change `ENERGY_CATALOG` in `app/app.yaml`). Ingest and deploy stay off until
-   `DATABRICKS_HOST` is set.
+3. In the GitHub repo, in this order: an environment `prod` (Settings → Environments) limited
+   to the `main` branch, holding the secrets `DATABRICKS_CLIENT_ID` and
+   `DATABRICKS_CLIENT_SECRET`, or `DATABRICKS_TOKEN` (no repository-level copies: any branch
+   could read those); then the variable `DATABRICKS_HOST` (the workspace URL). Optional
+   variable `ENERGY_CATALOG` if the workspace catalog is not called `workspace` (Deploy writes
+   it into the app's `app/app.yaml` too). Ingest and deploy stay off until
+   `DATABRICKS_HOST` is set. Give `prod` no required reviewers or wait timer: the scheduled
+   ingest and the `validate` check on every push to `main` use it too, and would wait.
 4. Deploy: push to `main` (or run the Deploy workflow, or `uv run inv deploy`).
 5. Let the app read gold (replace the principal with the app's service principal, shown on the
    app's page):
@@ -113,7 +116,6 @@ and reads it from the environment: `DATABRICKS_HOST` plus `DATABRICKS_TOKEN` (or
 
 ## Known issues to fix
 
-- The ingest's time budget plus the wait for the pipeline can run past GitHub's 6-hour job limit.
 - An error that never goes away on an old date range would block that country on every run.
 - The Health tab adds up 7 days of runs, so its counts are too high, and it doesn't say whether
   a rule drops or warns.

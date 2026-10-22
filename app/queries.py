@@ -5,7 +5,9 @@ from __future__ import annotations
 
 import logging
 import os
+import re
 import time
+from collections import OrderedDict
 from datetime import date
 
 import pandas as pd
@@ -73,19 +75,30 @@ def connect():
     )
 
 
+MAX_CACHE = 256  # answers kept; each key is a query and its parameters (a country and a day)
+
+
 class Queries:
     def __init__(self, connect=connect, *, clock=time.monotonic, catalog=CATALOG, ttl=600.0):
+        if not re.fullmatch(r"[A-Za-z_][A-Za-z0-9_]*", catalog or ""):
+            raise ValueError(
+                f"ENERGY_CATALOG must be letters, digits and _ (not starting with a digit), not {catalog!r}"
+            )
         self._connect = connect
         self._clock = clock
-        self._catalog = catalog
+        self._catalog = f"`{catalog}`"  # an identifier, quoted where the queries name it
         self._ttl = ttl
-        self._cache: dict[tuple, tuple[float, pd.DataFrame]] = {}
+        self._cache: OrderedDict[tuple, tuple[float, pd.DataFrame]] = OrderedDict()
 
     def _run(self, template: str, params: dict | None = None) -> pd.DataFrame:
         sql = template.format(c=self._catalog)
         key = (sql, tuple(sorted((params or {}).items())))
         hit = self._cache.get(key)
         if hit and self._clock() - hit[0] < self._ttl:
+            try:
+                self._cache.move_to_end(key)
+            except KeyError:  # another worker thread evicted it in between: still a valid answer
+                pass
             return hit[1]
         try:
             with self._connect() as conn, conn.cursor() as cur:
@@ -98,6 +111,9 @@ class Queries:
             raise Unavailable(str(e), setup=setup) from e
         df = pd.DataFrame([tuple(r) for r in rows], columns=cols)
         self._cache[key] = (self._clock(), df)
+        self._cache.move_to_end(key)
+        while len(self._cache) > MAX_CACHE:
+            self._cache.popitem(last=False)  # least recently used
         return df
 
     def day(self, country: str, day: date) -> pd.DataFrame:

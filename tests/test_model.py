@@ -24,3 +24,15 @@ def test_every_recorded_series_has_a_kind():
 
 def test_kinds_are_the_five():
     assert set(model.KIND.values()) == {"generation", "consumption", "trade", "load", "share"}
+
+
+def test_the_catalog_name_must_be_an_identifier():
+    # Every table name in the pipeline is built from it.
+    assert model.catalog_name("workspace") == "workspace"
+    assert model.catalog_name("_energy_2") == "_energy_2"
+    for bad in ("", "1st", "a.b", "a`b", "a-b", "katälog", "a b"):
+        try:
+            model.catalog_name(bad)
+        except ValueError:
+            continue
+        raise AssertionError(f"accepted {bad!r}")
