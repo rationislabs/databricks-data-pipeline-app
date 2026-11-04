@@ -10,7 +10,7 @@ anyio==4.15.1
     #   httpx
     #   httpx2
     #   starlette
-brotli==1.2.0
+brotli==1.2.1
     # via gradio
 certifi==2026.10.19
     # via
@@ -131,7 +131,7 @@ pillow==13.0.0
 plotly==7.1.0
 protobuf==7.36.2
     # via databricks-sdk
-pyasn1==0.6.4
+pyasn1==0.6.5
     # via pyasn1-modules
 pyasn1-modules==0.4.2
     # via google-auth
