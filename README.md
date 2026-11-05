@@ -130,3 +130,5 @@ and reads it from the environment: `DATABRICKS_HOST` plus `DATABRICKS_TOKEN` (or
 - Local runs against Databricks leave a temp copy of the data on disk.
 
 Contact: [github.com/rationislabs](https://github.com/rationislabs)
+
+This project was built with AI assistance.
