@@ -108,7 +108,7 @@ numpy==2.5.4 ; python_full_version >= '3.12'
     # via
     #   gradio
     #   pandas
-oauthlib==4.0.0
+oauthlib==4.0.1
     # via databricks-sql-connector
 openpyxl==3.1.5
     # via databricks-sql-connector
